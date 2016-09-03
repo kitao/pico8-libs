@@ -1,4 +1,5 @@
 do
+ local f={}
  local p={}
  local permutation={151,160,137,91,90,15,
   131,13,201,95,96,53,194,233,7,225,140,36,103,30,69,142,8,99,37,240,21,10,23,
@@ -16,12 +17,11 @@ do
  }
 
  for i=0,255 do
+  local t=shr(i,8)
+  f[t]=t*t*t*(t*(t*6-15)+10)
+
   p[i]=permutation[i+1]
   p[256+i]=permutation[i+1]
- end
-
- local function fade(t)
-  return t*t*t*(t*(t*6-15)+10)
  end
 
  local function lerp(t,a,b)
@@ -29,60 +29,47 @@ do
  end
 
  local function grad(hash,x,y,z)
-  local h,u,v=hash%16
+  local h=band(hash,15)
+  local u,v,r
+
   if h<8 then u=x else u=y end
   if h<4 then v=y elseif h==12 or h==14 then v=x else v=z end
-  local r
-  if h%2==0 then r=u else r=-u end
-  if h%4==0 then r=r+v else r=r-v end
+  if band(h,1)==0 then r=u else r=-u end
+  if band(h,2)==0 then r=r+v else r=r-v end
+
   return r
  end
 
- -- perlin noise
  function noise(x,y,z)
   y=y or 0
   z=z or 0
-  local ix=flr(x%255)
-  local iy=flr(y%255)
-  local iz=flr(z%255)
-  x=x-flr(x)
-  y=y-flr(y)
-  z=z-flr(z)
-  local u=fade(x)
-  local v=fade(y)
-  local w=fade(z)
 
-  local a =p[ix  ]+iy
-  local aa=p[a   ]+iz
-  local ab=p[a+1 ]+iz
-  local b =p[ix+1]+iy
-  local ba=p[b   ]+iz
-  local bb=p[b+1 ]+iz
+  local xi=band(x,255)
+  local yi=band(y,255)
+  local zi=band(z,255)
 
-  return lerp(
-   w,lerp(v,lerp(u,grad(p[aa  ],x  ,y  ,z  ),
-                   grad(p[ba  ],x-1,y  ,z  )),
-            lerp(u,grad(p[ab  ],x  ,y-1,z  ),
-                   grad(p[bb  ],x-1,y-1,z  ))),
-     lerp(v,lerp(u,grad(p[aa+1],x  ,y  ,z-1),
-                   grad(p[ba+1],x-1,y  ,z-1)),
-            lerp(u,grad(p[ab+1],x  ,y-1,z-1),
-                   grad(p[bb+1],x-1,y-1,z-1))))
- end
+  x=band(x,0x0.ff)
+  y=band(y,0x0.ff)
+  z=band(z,0x0.ff)
 
- -- fractional brownian motion
- function fbm(x,y,z,octaves,lacunarity,gain)
-  octaves=octaves or 8
-  lacunarity=lacunarity or 2
-  gain=gain or 0.5
-  local amplitude=1.0
-  local frequency=1.0
-  local sum=0.0
-  for i=0,octaves do
-   sum=sum+amplitude*noise(x*frequency,y*frequency,z*frequency)
-   amplitude=amplitude*gain
-   frequency=frequency*lacunarity
-  end
-  return sum
+  local u=f[x]
+  local v=f[y]
+  local w=f[z]
+
+  local a =p[xi  ]+yi
+  local aa=p[a   ]+zi
+  local ab=p[a+1 ]+zi
+  local b =p[xi+1]+yi
+  local ba=p[b   ]+zi
+  local bb=p[b+1 ]+zi
+
+  return lerp(w,lerp(v,lerp(u,grad(p[aa  ],x  ,y  ,z  ),
+                              grad(p[ba  ],x-1,y  ,z  )),
+                       lerp(u,grad(p[ab  ],x  ,y-1,z  ),
+                              grad(p[bb  ],x-1,y-1,z  ))),
+                lerp(v,lerp(u,grad(p[aa+1],x  ,y  ,z-1),
+                              grad(p[ba+1],x-1,y  ,z-1)),
+                       lerp(u,grad(p[ab+1],x  ,y-1,z-1),
+                              grad(p[bb+1],x-1,y-1,z-1))))
  end
 end
