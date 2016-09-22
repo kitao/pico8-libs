@@ -2,7 +2,7 @@ function los(x1,y1,x2,y2,fn)
  x1=flr(x1+0.5)
  y1=flr(y1+0.5)
  x2=flr(x2+0.5)
- x2=flr(x2+0.5)
+ y2=flr(y2+0.5)
 
  local sx,sy,dx,dy
 
